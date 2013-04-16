@@ -22,14 +22,18 @@ class Trader(object):
         self.tid = tid
         self.balance = balance
         self.blotter = []
-        self.outstandingOrders = []
+        self.outstandingOrders = [] # List of orders currently in LOB
         self.willing = 1
         self.able = 1
         self.lastquote = None
+    
+    def orderInBook(self, order):
+        self.outstandingOrders.append(order)
 
-    def bookkeep(self, trade, side, verbose):
-        self.blotter.append(trade)  # add trade record to trader's blotter
-        # NB What follows is **LAZY** -- assumes all orders are quantity=1
+    def bookkeep(self, trade, side, orderID, verbose):
+        self.blotter.append(trade)  # Add trade record to trader's blotter
+        if orderID:
+            self.outstandingOrders.remove(orderID)
         transactionPrice = trade['price']
         prevBalance = self.balance
         if side == 'bid':
@@ -61,8 +65,8 @@ class MarketMaker(Trader):
     the difference between their bid and offer price.
     '''
     
-    def getOrder(self):
-        pass
+    def getOrder(self, time, time_left, exchange):
+        return None
     
 
 class HFT(Trader):
@@ -72,26 +76,26 @@ class HFT(Trader):
     have much higher trading activity and much shorter holding periods.
     '''
     
-    def getOrder(self):
-        pass
+    def getOrder(self, time, time_left, exchange):
+        return None
     
 
-class FBuyers(Trader):
+class FBuyer(Trader):
     '''
     Fundamental Buyers, who try to build a long position during the day.
     '''
     
-    def getOrder(self):
-        pass
+    def getOrder(self, time, time_left, exchange):
+        return None
 
 
-class FSellers(Trader):
+class FSeller(Trader):
     '''
     Fundamental Sellers, who try to build a short position during the day.
     '''
     
-    def getOrder(self):
-        pass
+    def getOrder(self, time, time_left, exchange):
+        return None
     
     
 class Opportunistic(Trader):
@@ -100,8 +104,8 @@ class Opportunistic(Trader):
     fundamental traders at times when they see significant directional moves.
     '''
     
-    def getOrder(self):
-        pass
+    def getOrder(self, time, time_left, exchange):
+        return None
     
     
     

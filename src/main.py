@@ -5,7 +5,4 @@ Created on 15 Apr 2013
 '''
 
 if __name__ == '__main__':
-    from PyLOB import OrderBook
     
-    lob = OrderBook()
-    print "success!"
