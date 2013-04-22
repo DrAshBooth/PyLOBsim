@@ -30,6 +30,7 @@ class DataModel(object):
         self.numEntries = None
         self.currIndex = -1
         self.symbol = symbol
+        self.missedMOs = 0
     
     def readFile(self, filename, verbose):
         try:
@@ -38,17 +39,16 @@ class DataModel(object):
             if verbose: print "file in memory, loading lines into list"
             a = 1
             for line in reader:
-                if a >5000: break
+                if a >5000: break # REMEMBER TO TAKE THIS OUT
                 line = line[1:]
                 self.infile.append(line)
                 a +=1
             self.numEntries = len(self.infile)
             if verbose: print "lines read"
         except IOError:
-            print 
             sys.exit('Cannot open input file: {}'.format(filename))
             
-    def getNextAction(self):
+    def getNextAction(self, lob):
         self.currIndex+=1
         quote = {}
         idx = self.currIndex
@@ -56,10 +56,11 @@ class DataModel(object):
             self.currIndex += 1
             line = self.infile[self.currIndex]
             messageType = line[8]
+            idNum = line[9:21]
             if messageType == 'A':  # Order added
                 if line[28:34] == self.symbol:
                     quote['type'] = 'limit'
-                    quote['idNum'] = line[9:21]
+                    quote['idNum'] = idNum
                     if line[21] == 'B':
                         quote['side'] = 'bid'
                     elif line[21] == 'S':
@@ -69,30 +70,70 @@ class DataModel(object):
                     quote['qty'] = int(line[22:28])
                     quote['price'] = float(line[34:40] + '.' + line[40:44])
                     quote['tid'] = -1
-#                    print "id = %s" % quote['idNum']
-#                    print "side = %s" % quote['side']
-#                    print "qty = %d" % quote['qty']
-#                    print "price = %f\n" % quote['price']
                     break
             elif messageType == 'a':
                 if line[32:38] == self.symbol:  # Order added - long format
-                    relevantFound = True
                     quote['type'] = 'limit'
-                    print line
+                    quote['idNum'] = idNum
+                    if line[21] == 'B':
+                        quote['side'] = 'bid'
+                    elif line[21] == 'S':
+                        quote['side'] = 'ask'
+                    else:
+                        sys.exit("side not recognised in short add")
+                    quote['qty'] = int(line[22:32])
+                    quote['price'] = float(line[38:50] + '.' + line[50:57]) #change
+                    quote['tid'] = -1
+                    break
             elif messageType == 'E':
-                # if order id in lob.bids 
-                    # market sell order
-                # elif order id in lob.asks:
-                    # market buy order 
-                pass
+                if lob.asks.orderExists(idNum):
+                    # Counterparty was ask
+                    # market bid order
+                    quote['type'] = 'market'
+                    quote['side'] = 'bid'
+                    quote['qty'] = int(line[21:27]) 
+                    quote['tid'] = -1
+                    break
+                elif lob.bids.orderExists(idNum):
+                    # Counterparty was a bid
+                    # market ask order
+                    quote['type'] = 'market'
+                    quote['side'] = 'ask'
+                    quote['qty'] = int(line[21:27]) 
+                    quote['tid'] = -1
+                    break
+                else:
+                    # Counterparty has already been hit.
+                    # not sure what to do about this yet
+                    self.missedMOs+=1
             elif messageType == 'e':
-                # if order id in lob.bids 
-                    # market sell order
-                # elif order id in lob.asks:
-                    # market buy order 
-                pass
+                if lob.asks.orderExists(idNum):
+                    # Counterparty was ask
+                    # market bid order
+                    quote['type'] = 'market'
+                    quote['side'] = 'bid'
+                    quote['qty'] = int(line[21:31]) 
+                    quote['tid'] = -1
+                    break
+                elif lob.bids.orderExists(idNum):
+                    # Counterparty was a bid
+                    # market ask order
+                    quote['type'] = 'market'
+                    quote['side'] = 'ask'
+                    quote['qty'] = int(line[21:31]) 
+                    quote['tid'] = -1
+                    break
+                else:
+                    # Counterparty has already been hit.
+                    # not sure what to do about this yet
+                    self.missedMOs+=1
             elif messageType == 'X':
-                pass
+                if lob.asks.orderExists(idNum):
+                    # complete cancel or a modify?
+                    currentQty = lob.asks.getOrder(idNum).qty
+                elif lob.bids.orderExists(line[9:21]):
+                    # complete cancel or a modify?
+                    currentQty = lob.bids.getOrder(idNum).qty
             elif messageType == 'x':
                 pass
         self.currIndex = idx
