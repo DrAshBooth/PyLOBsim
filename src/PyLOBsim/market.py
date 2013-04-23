@@ -6,6 +6,7 @@ Created on 16 Apr 2013
 import sys
 import random
 from PyLOB import OrderBook
+from datareader import DataModel
 
 from traders import MarketMaker, HFT, FBuyer, FSeller, Opportunistic
 
@@ -14,10 +15,13 @@ class Market(object):
     classdocs
     '''
 
-    def __init__(self):
+    def __init__(self, usingData, filename=None):
         '''
         Constructor
         '''
+        self.usingData = usingData
+        self.dataModel = None
+        self.inDatafile = filename
         self.traders = {}
         
     def populateMarket(self, tradersSpec, verbose):
@@ -48,66 +52,117 @@ class Market(object):
                 n_agents += 1
         if n_agents < 1:
             print 'WARNING: No agents specified\n'
+        if self.usingData:
+            self.dataModel = DataModel('MTSe  ')
+            self.dataModel.readFile(self.inDatafile, verbose)
         if verbose :
             for t in range(n_agents):
                 name = 'B%02d' % t
                 print(self.traders[name])
+                
     
-    def run(self, sessId, startTime, endTime, traderSpec, dumpFile):
+    def tradeStats(self, expid, dumpfile, time):
+        '''
+        Dumps CSV statistics on exchange data and trader population to file for 
+        later analysis.
+        '''
+        trader_types = {}
+        for t in self.agents:
+            ttype = self.traders[t].ttype
+            if ttype in trader_types.keys():
+                t_balance = (trader_types[ttype]['balance_sum'] + 
+                             self.traders[t].balance)
+                n = trader_types[ttype]['n'] + 1
+            else:
+                t_balance = self.traders[t].balance
+                n = 1
+            trader_types[ttype] = {'n':n, 'balance_sum':t_balance}
+
+        dumpfile.write('%s, %06d, ' % (expid, time))
+        for ttype in sorted(list(trader_types.keys())):
+                n = trader_types[ttype]['n']
+                s = trader_types[ttype]['balance_sum']
+                dumpfile.write('%s, %d, %d, %f, ' % (ttype, s, n, s / float(n)))
+
+        dumpfile.write('\n');
+    
+    def run(self, sessId, endTime, traderSpec, dumpFile, agentProb):
         '''
         One day run of the market
         '''
         
         exchange = OrderBook()
 
-        self.populateMarket(traderSpec, False)
-        
-        duration = float(endTime - startTime)
-        lastUpdate = -1.0
-        time = startTime
+        self.populateMarket(traderSpec, True)
 
         ordersVerbose = False
         lobVerbose = False
         processVerbose = False
         respondVerbose = False
         bookkeepVerbose = False
+        
+        time = 0
 
         while time < endTime:
-            timeLeft = (endTime - time) / duration
+            timeLeft = (endTime - time) / endTime
             #print('%s; t=%08.2f (%4.1f) ' % (sessId, time, timeLeft*100))
-            trade = None
+            trades = []
+            
+            
+            if random.random() > agentProb:
+                # Get action from data
+                action, day_ended = self.dataModel.getNextAction(exchange)
+                fromData = True
+            else:
+                # Get action from agents
+                tid = random.choice(self.traders.keys())
+                action = self.traders[tid].getAction(time, timeLeft, exchange)
+                fromData = False
+                
+            if action != None:
+                atype = action['type']
+                if atype == 'market' or atype =='limit':
+                    res_trades, orderInBook = exchange.processOrder(action, 
+                                                                    fromData, 
+                                                                    True)
+                    if res_trades:
+                        for t in res_trades:
+                            trades.append(t['price'])
+                elif action['type'] == 'cancel':
+                    exchange.cancelOrder(action['side'], action['idNum'])
+                elif action['type'] == 'modify':
+                    exchange.modifyOrder(action['idNum'], action)
 
-            # Get an order (or None) from a randomly chosen trader
-            tid = random.choice(self.traders.keys())
-            order = self.traders[tid].getorder(time, timeLeft, exchange)
-
-            if order != None:
-                # Send order to exchange
-                trades, orderInBook = exchange.processOrder(order, 
-                                                            processVerbose)
                 # Does the originating trader need to be informed of limit 
                 # orders that has been put in the book?
-                if orderInBook:
+                if orderInBook and not fromData:
                     self.traders[tid].orderInBook(orderInBook)
+                    
                 for trade in trades:
                     # Counter-parties update order lists and blotters
-                    self.traders[trade['party1'][0]].bookkeep(trade,
-                                                              trade['party1'][1],
-                                                              trade['party1'][2],
-                                                              bookkeepVerbose)
-                    self.traders[trade['party2'][0]].bookkeep(trade, 
-                                                              trade['party2'][1],
-                                                              trade['party2'][2],
-                                                              bookkeepVerbose)
+                    if trade['party1'][0] != -1:
+                        self.traders[trade['party1'][0]].bookkeep(trade,
+                                                                  trade['party1'][1],
+                                                                  trade['party1'][2],
+                                                                  bookkeepVerbose)
+                    if trade['party2'][0] != -1:
+                        self.traders[trade['party2'][0]].bookkeep(trade, 
+                                                                  trade['party2'][1],
+                                                                  trade['party2'][2],
+                                                                  bookkeepVerbose)
                     # Traders respond to whatever happened
                     for t in self.traders.keys():
                         self.traders[t].respond(time, exchange, 
                                                 trade, respondVerbose)
 
             time += 1
+        
 
-#        # end of an experiment -- dump the tape
-#        exchange.tape_dump('transactions.csv', 'w', 'keep')
-#
-#        # write trade_stats for this experiment NB end-of-session summary only
-#        trade_stats(sessId, traders, tdump, time, exchange.publish_lob(time, lob_verbose))
+        # end of an experiment -- dump the tape
+        exchange.tapeDump('transactions.csv', 'w', 'keep')
+ 
+        # write trade_stats for this experiment NB end-of-session summary only
+        self.tradeStats(sessId, dumpFile, time)
+
+
+

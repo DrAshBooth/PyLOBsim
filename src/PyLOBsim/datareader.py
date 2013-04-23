@@ -22,7 +22,8 @@ x - order cancel - long form
 
 import os
 import sys
-
+from test.test_iterlen import len
+ 
 class DataModel(object):
     
     def __init__(self, symbol):
@@ -39,7 +40,7 @@ class DataModel(object):
             if verbose: print "file in memory, loading lines into list"
             a = 1
             for line in reader:
-                if a >5000: break # REMEMBER TO TAKE THIS OUT
+                if a > 1000000: break # REMEMBER TO TAKE THIS OUT
                 line = line[1:]
                 self.infile.append(line)
                 a +=1
@@ -49,11 +50,11 @@ class DataModel(object):
             sys.exit('Cannot open input file: {}'.format(filename))
             
     def getNextAction(self, lob):
-        self.currIndex+=1
         quote = {}
-        idx = self.currIndex
         for i in range(self.currIndex, self.numEntries):
             self.currIndex += 1
+            if self.currIndex>(len(self.infile)-1): 
+                return None, True
             line = self.infile[self.currIndex]
             messageType = line[8]
             idNum = line[9:21]
@@ -105,7 +106,7 @@ class DataModel(object):
                 else:
                     # Counterparty has already been hit.
                     # not sure what to do about this yet
-                    self.missedMOs+=1
+                    self.missedMOs += 1
             elif messageType == 'e':
                 if lob.asks.orderExists(idNum):
                     # Counterparty was ask
@@ -126,30 +127,78 @@ class DataModel(object):
                 else:
                     # Counterparty has already been hit.
                     # not sure what to do about this yet
-                    self.missedMOs+=1
+                    self.missedMOs += 1
             elif messageType == 'X':
                 if lob.asks.orderExists(idNum):
                     # complete cancel or a modify?
-                    currentQty = lob.asks.getOrder(idNum).qty
+                    currentOrder = lob.asks.getOrder(idNum)
+                    currentQty = currentOrder.qty
+                    num2cancel = int(line[21:27])
+                    if num2cancel>=currentQty:
+                        quote['type'] = 'cancel'
+                        quote['side'] = 'ask'
+                        quote['idNum'] = idNum
+                    else:
+                        quote['type'] = 'modify'
+                        quote['side'] = 'ask'
+                        quote['idNum'] = idNum
+                        quote['price'] = currentOrder.price
+                        quote['qty'] = currentQty - num2cancel
+                        quote['tid'] = -1
+                    break
                 elif lob.bids.orderExists(line[9:21]):
                     # complete cancel or a modify?
-                    currentQty = lob.bids.getOrder(idNum).qty
+                    currentOrder = lob.bids.getOrder(idNum)
+                    currentQty = currentOrder.qty
+                    num2cancel = int(line[21:27])
+                    if num2cancel>=currentQty:
+                        quote['type'] = 'cancel'
+                        quote['side'] = 'bid'
+                        quote['idNum'] = idNum
+                    else:
+                        quote['type'] = 'modify'
+                        quote['side'] = 'bid'
+                        quote['idNum'] = idNum
+                        quote['price'] = currentOrder.price
+                        quote['qty'] = currentQty - num2cancel
+                        quote['tid'] = -1
+                    break
             elif messageType == 'x':
-                pass
-        self.currIndex = idx
-#        if not quote:
-#            return None
-#        else:
-#            return quote
-
-        
-
-os.chdir('/Users/User/Downloads')
-
-the_model = DataModel('MTSe  ')
-
-the_model.readFile('2013-04-18_EU_pitch', False)
-the_model.getNextAction()
-the_model.getNextAction()
-the_model.getNextAction()
-the_model.getNextAction()
+                if lob.asks.orderExists(idNum):
+                    # complete cancel or a modify?
+                    currentOrder = lob.asks.getOrder(idNum)
+                    currentQty = currentOrder.qty
+                    num2cancel = int(line[21:31])
+                    if num2cancel>=currentQty:
+                        quote['type'] = 'cancel'
+                        quote['side'] = 'ask'
+                        quote['idNum'] = idNum
+                    else:
+                        quote['type'] = 'modify'
+                        quote['side'] = 'ask'
+                        quote['idNum'] = idNum
+                        quote['price'] = currentOrder.price
+                        quote['qty'] = currentQty - num2cancel
+                        quote['tid'] = -1
+                    break
+                elif lob.bids.orderExists(line[9:21]):
+                    # complete cancel or a modify?
+                    currentOrder = lob.bids.getOrder(idNum)
+                    currentQty = currentOrder.qty
+                    num2cancel = int(line[21:31])
+                    if num2cancel>=currentQty:
+                        quote['type'] = 'cancel'
+                        quote['side'] = 'bid'
+                        quote['idNum'] = idNum
+                    else:
+                        quote['type'] = 'modify'
+                        quote['side'] = 'bid'
+                        quote['idNum'] = idNum
+                        quote['price'] = currentOrder.price
+                        quote['qty'] = currentQty - num2cancel
+                        quote['tid'] = -1
+                    break
+        if not quote:
+            return None, False
+        else:
+            return quote, False

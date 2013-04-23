@@ -65,7 +65,7 @@ class MarketMaker(Trader):
     the difference between their bid and offer price.
     '''
     
-    def getOrder(self, time, time_left, exchange):
+    def getAction(self, time, time_left, exchange):
         return None
     
 
@@ -76,7 +76,7 @@ class HFT(Trader):
     have much higher trading activity and much shorter holding periods.
     '''
     
-    def getOrder(self, time, time_left, exchange):
+    def getAction(self, time, time_left, exchange):
         return None
     
 
@@ -85,7 +85,7 @@ class FBuyer(Trader):
     Fundamental Buyers, who try to build a long position during the day.
     '''
     
-    def getOrder(self, time, time_left, exchange):
+    def getAction(self, time, time_left, exchange):
         return None
 
 
@@ -94,7 +94,7 @@ class FSeller(Trader):
     Fundamental Sellers, who try to build a short position during the day.
     '''
     
-    def getOrder(self, time, time_left, exchange):
+    def getAction(self, time, time_left, exchange):
         return None
     
     
@@ -104,7 +104,7 @@ class Opportunistic(Trader):
     fundamental traders at times when they see significant directional moves.
     '''
     
-    def getOrder(self, time, time_left, exchange):
+    def getAction(self, time, time_left, exchange):
         return None
     
     
