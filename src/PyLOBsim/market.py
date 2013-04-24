@@ -92,11 +92,14 @@ class Market(object):
         '''
         
         exchange = OrderBook()
+        
+        # To keep track of what the state of the book would have been without
+        # the agents, we use a data only LOB. We don't care about the output 
+        # from this. 
+        dataOnlyLob = OrderBook() 
 
         self.populateMarket(traderSpec, True)
 
-        ordersVerbose = False
-        lobVerbose = False
         processVerbose = False
         respondVerbose = False
         bookkeepVerbose = False
@@ -107,8 +110,6 @@ class Market(object):
             timeLeft = (endTime - time) / endTime
             #print('%s; t=%08.2f (%4.1f) ' % (sessId, time, timeLeft*100))
             trades = []
-            
-            
             if random.random() > agentProb:
                 # Get action from data
                 action, day_ended = self.dataModel.getNextAction(exchange)
@@ -123,15 +124,28 @@ class Market(object):
             if action != None:
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
-                    res_trades, orderInBook = exchange.processOrder(action, 
+                    if fromData:
+                        # Add to data book for refference
+                        dataOnlyLob.processOrder(action, fromData, False)
+                        # Use relative pricing to add to exchange
+                        do_ba = dataOnlyLob.getBestAsk()
+                        do_bb = dataOnlyLob.getBestBid()
+                        if do_ba and do_bb:
+                            mid_price = do_bb + (do_ba-do_bb)/2
+                            deviation = do_
+                        res_trades, orderInBook = exchange.processOrder(action, 
                                                                     fromData, 
-                                                                    True)
+                                                                    processVerbose)
                     if res_trades:
                         for t in res_trades:
                             trades.append(t['price'])
                 elif action['type'] == 'cancel':
+                    if fromData:
+                        dataOnlyLob.cancelOrder(action['side'], action['idNum'])
                     exchange.cancelOrder(action['side'], action['idNum'])
                 elif action['type'] == 'modify':
+                    if fromData:
+                        dataOnlyLob.modifyOrder(action['idNum'], action)
                     exchange.modifyOrder(action['idNum'], action)
 
                 # Does the originating trader need to be informed of limit 
@@ -155,9 +169,7 @@ class Market(object):
                     for t in self.traders.keys():
                         self.traders[t].respond(time, exchange, 
                                                 trade, respondVerbose)
-
             time += 1
-        
 
         # end of an experiment -- dump the tape
         exchange.tapeDump('transactions.csv', 'w', 'keep')
