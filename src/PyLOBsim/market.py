@@ -7,7 +7,6 @@ import sys
 import random
 from PyLOB import OrderBook
 from datareader import DataModel
-
 from traders import MarketMaker, HFT, FBuyer, FSeller, Opportunistic
 
 class Market(object):
@@ -125,17 +124,24 @@ class Market(object):
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
                     if fromData:
-                        # Add to data book for refference
+                        # Add to data book for reference
                         dataOnlyLob.processOrder(action, fromData, False)
                         # Use relative pricing to add to exchange
-                        do_ba = dataOnlyLob.getBestAsk()
-                        do_bb = dataOnlyLob.getBestBid()
-                        if do_ba and do_bb:
-                            mid_price = do_bb + (do_ba-do_bb)/2
-                            deviation = do_
-                        res_trades, orderInBook = exchange.processOrder(action, 
-                                                                    fromData, 
-                                                                    processVerbose)
+                        if atype == 'limit':
+                            do_ba = dataOnlyLob.getBestAsk()
+                            do_bb = dataOnlyLob.getBestBid()
+                            c_ba = exchange.getBestAsk()
+                            c_bb = exchange.getBestBid()
+                            if do_ba and do_bb and c_ba and c_bb:
+                                data_mid_price = do_bb + (do_ba-do_bb)/2
+                                deviation = ((action['price']-data_mid_price) / 
+                                             data_mid_price)
+                                current_mid_price = c_bb + (c_ba-c_bb)/2
+                                action['price'] = (current_mid_price + 
+                                                   deviation*current_mid_price)
+                    res_trades, orderInBook = exchange.processOrder(action, 
+                                                                fromData, 
+                                                                processVerbose)
                     if res_trades:
                         for t in res_trades:
                             trades.append(t['price'])
