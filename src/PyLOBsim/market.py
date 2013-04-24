@@ -112,6 +112,7 @@ class Market(object):
             if random.random() > agentProb:
                 # Get action from data
                 action, day_ended = self.dataModel.getNextAction(exchange)
+                # RELATIVE PRICING PLEASE!!!!!
                 fromData = True
             else:
                 # Get action from agents
