@@ -59,3 +59,7 @@ if __name__ == '__main__':
     dumpFile = open(fname, 'w')
     
     theMarket.run('1', 1000, traderSpec, dumpFile, 0.5)
+    
+    
+    
+    
