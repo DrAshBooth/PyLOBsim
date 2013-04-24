@@ -66,7 +66,7 @@ class Market(object):
         later analysis.
         '''
         trader_types = {}
-        for t in self.agents:
+        for t in self.traders:
             ttype = self.traders[t].ttype
             if ttype in trader_types.keys():
                 t_balance = (trader_types[ttype]['balance_sum'] + 
@@ -128,6 +128,7 @@ class Market(object):
                         dataOnlyLob.processOrder(action, fromData, False)
                         # Use relative pricing to add to exchange
                         if atype == 'limit':
+                            print action['qty']
                             do_ba = dataOnlyLob.getBestAsk()
                             do_bb = dataOnlyLob.getBestBid()
                             c_ba = exchange.getBestAsk()

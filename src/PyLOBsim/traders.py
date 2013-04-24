@@ -8,6 +8,8 @@ TODO:
 
 '''
 
+import random
+
 class Trader(object):
     '''
     Trader superclass. All Traders have:
@@ -22,24 +24,30 @@ class Trader(object):
         self.tid = tid
         self.balance = balance
         self.blotter = []
-        self.outstandingOrders = [] # List of orders currently in LOB
+        self.outstandingOrders = {} # Dict of order currently in lob keyed of ID
         self.willing = 1
         self.able = 1
         self.lastquote = None
     
     def orderInBook(self, order):
-        self.outstandingOrders.append(order)
+        idNum = order['idNum']
+        self.outstandingOrders[idNum] = order
 
     def bookkeep(self, trade, side, orderID, verbose):
         self.blotter.append(trade)  # Add trade record to trader's blotter
+        qty = trade['qty']
         if orderID:
-            self.outstandingOrders.remove(orderID)
+            if trade['qty'] < self.outstandingOrders[orderID]:
+                # modify the order amount
+                self.outstandingOrders[orderID]['qty'] -= qty
+            else:
+                self.outstandingOrders.remove(orderID)
         transactionPrice = trade['price']
         prevBalance = self.balance
         if side == 'bid':
-            self.balance -= transactionPrice
+            self.balance -= transactionPrice * qty
         else:
-            self.balance += transactionPrice
+            self.balance += transactionPrice * qty
         if verbose: print('previous balance=%f, new balance=%f ' % 
                           (prevBalance, self.balance))
         
@@ -63,10 +71,23 @@ class MarketMaker(Trader):
     Intermediaries, that post prices on both sides of the order book and
     try to maintain their position throughout the day, making their income from
     the difference between their bid and offer price.
-    '''
+    ''' 
     
     def getAction(self, time, time_left, exchange):
-        return None
+        # What should quantity be?
+        qty = 2000
+        if random.random() < 0.5:
+            # bid large order just below best bid
+            bb = exchange.getBestBid()
+            if bb:
+                order = {'price' : bb - exchange.tickSize,
+                         'qty' : qty,
+                         'side' : 'bid',
+                         'tid' : self.tid}
+            return 
+        else:
+            # ask large order just above best ask
+            pass
     
 
 class HFT(Trader):

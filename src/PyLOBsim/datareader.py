@@ -40,7 +40,7 @@ class DataModel(object):
             if verbose: print "file in memory, loading lines into list"
             a = 1
             for line in reader:
-                if a > 1000000: break # REMEMBER TO TAKE THIS OUT
+                if a > 100000: break # REMEMBER TO TAKE THIS OUT
                 line = line[1:]
                 self.infile.append(line)
                 a +=1
