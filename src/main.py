@@ -14,17 +14,18 @@ if __name__ == '__main__':
     
     os.chdir('/Users/User/Downloads')
     
-    theMarket = Market(True, '2013-04-22_EU_pitch')
+    theMarket = Market(True, '2013-04-22_EU_pitch_short')
     
-    traderSpec = [('MM', 5), 
-                  ('HFT', 5),
-                  ('FBYR', 5),
-                  ('FSLR', 5)]
+    traderSpec = [('MM', 100),
+                  ('HFT', 1),
+                  ('FBYR', 50),
+                  ('FSLR', 50)]
     
     fname = 'balances.csv'
     dumpFile = open(fname, 'w')
     
-    theMarket.run('1', 1000, traderSpec, dumpFile, 0.5)
+    theMarket.run('1', 10000, traderSpec, dumpFile, 0.4)
+    theMarket.plotPrices()
     
     
     

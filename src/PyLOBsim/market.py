@@ -7,21 +7,26 @@ import sys
 import random
 from PyLOB import OrderBook
 from datareader import DataModel
-from traders import MarketMaker, HFT, FBuyer, FSeller, Opportunistic
+from traders import MarketMaker, HFT, FBuyer, FSeller
 
 class Market(object):
     '''
     classdocs
     '''
 
-    def __init__(self, usingData, filename=None):
+    def __init__(self, usingAgents, filename=None):
         '''
         Constructor
         '''
-        self.usingData = usingData
+        self.usingAgents = usingAgents
         self.dataModel = None
         self.inDatafile = filename
         self.traders = {}
+        self.exchange = OrderBook()
+        # To keep track of what the state of the book would have been without
+        # the agents, we use a data only LOB. We don't care about the output 
+        # from this. 
+        self.dataOnlyLob = OrderBook()
         
     def populateMarket(self, tradersSpec, verbose):
         '''
@@ -37,24 +42,21 @@ class Market(object):
                     return FBuyer('FBYR', name, 0.00)
             elif agentType == 'FSLR':
                     return FSeller('FSLR', name, 0.00)
-            elif agentType == 'OPTC':
-                    return Opportunistic('OPTC', name, 0.00)
             else:
                 sys.exit("FATAL: don't know agent type %s\n" % agentType)
-
-        n_agents = 0
-        for agentType in tradersSpec:
-            ttype = agentType[0]
-            for a in range(agentType[1]):
-                tname = 'B%02d' % n_agents  # Trader i.d. string
-                self.traders[tname] = traderType(ttype, tname)
-                n_agents += 1
-        if n_agents < 1:
-            print 'WARNING: No agents specified\n'
-        if self.usingData:
-            self.dataModel = DataModel('MTSe  ')
-            self.dataModel.readFile(self.inDatafile, verbose)
-        if verbose :
+        if self.usingAgents:
+            n_agents = 0
+            for agentType in tradersSpec:
+                ttype = agentType[0]
+                for a in range(agentType[1]):
+                    tname = 'B%02d' % n_agents  # Trader i.d. string
+                    self.traders[tname] = traderType(ttype, tname)
+                    n_agents += 1
+            if n_agents < 1:
+                print 'WARNING: No agents specified\n'
+        self.dataModel = DataModel('MTSe  ')
+        self.dataModel.readFile(self.inDatafile, verbose)
+        if self.usingAgents and verbose :
             for t in range(n_agents):
                 name = 'B%02d' % t
                 print(self.traders[name])
@@ -62,42 +64,46 @@ class Market(object):
     
     def tradeStats(self, expid, dumpfile, time):
         '''
-        Dumps CSV statistics on exchange data and trader population to file for 
+        Dumps CSV statistics on self.exchange data and trader population to file for 
         later analysis.
         '''
-        trader_types = {}
-        for t in self.traders:
-            ttype = self.traders[t].ttype
-            if ttype in trader_types.keys():
-                t_balance = (trader_types[ttype]['balance_sum'] + 
-                             self.traders[t].balance)
-                n = trader_types[ttype]['n'] + 1
-            else:
-                t_balance = self.traders[t].balance
-                n = 1
-            trader_types[ttype] = {'n':n, 'balance_sum':t_balance}
-
-        dumpfile.write('%s, %06d, ' % (expid, time))
-        for ttype in sorted(list(trader_types.keys())):
-                n = trader_types[ttype]['n']
-                s = trader_types[ttype]['balance_sum']
-                dumpfile.write('%s, %d, %d, %f, ' % (ttype, s, n, s / float(n)))
-
-        dumpfile.write('\n');
+        if self.usingAgents:
+            trader_types = {}
+            for t in self.traders:
+                ttype = self.traders[t].ttype
+                if ttype in trader_types.keys():
+                    t_balance = (trader_types[ttype]['balance_sum'] + 
+                                 self.traders[t].balance)
+                    n = trader_types[ttype]['n'] + 1
+                else:
+                    t_balance = self.traders[t].balance
+                    n = 1
+                trader_types[ttype] = {'n':n, 'balance_sum':t_balance}
+    
+            dumpfile.write('%s, %06d, ' % (expid, time))
+            for ttype in sorted(list(trader_types.keys())):
+                    n = trader_types[ttype]['n']
+                    s = trader_types[ttype]['balance_sum']
+                    dumpfile.write('%s, %d, %d, %f, ' % (ttype, s, n, s / float(n)))
+    
+            dumpfile.write('\n');
+    
+    def plotPrices(self):
+        import pylab
+        prices = []
+        times = []
+        for tapeitem in self.exchange.tape:
+            prices.append(tapeitem['price'])
+            times.append(tapeitem['time'])
+        pylab.plot(times,prices,'ko')
+        pylab.show()
     
     def run(self, sessId, endTime, traderSpec, dumpFile, agentProb):
         '''
         One day run of the market
-        '''
-        
-        exchange = OrderBook()
-        
-        # To keep track of what the state of the book would have been without
-        # the agents, we use a data only LOB. We don't care about the output 
-        # from this. 
-        dataOnlyLob = OrderBook() 
+        ''' 
 
-        self.populateMarket(traderSpec, True)
+        self.populateMarket(traderSpec, False)
 
         processVerbose = False
         respondVerbose = False
@@ -109,30 +115,29 @@ class Market(object):
             timeLeft = (endTime - time) / endTime
             #print('%s; t=%08.2f (%4.1f) ' % (sessId, time, timeLeft*100))
             trades = []
-            if random.random() > agentProb:
-                # Get action from data
-                action, day_ended = self.dataModel.getNextAction(exchange)
-                # RELATIVE PRICING PLEASE!!!!!
-                fromData = True
-            else:
+            if self.usingAgents and random.random() < agentProb:
                 # Get action from agents
                 tid = random.choice(self.traders.keys())
-                action = self.traders[tid].getAction(time, timeLeft, exchange)
+                action = self.traders[tid].getAction(time, timeLeft, self.exchange)
                 fromData = False
+            else:
+                # Get action from data
+                action, day_ended = self.dataModel.getNextAction(self.exchange)
+                # RELATIVE PRICING PLEASE!!!!!
+                fromData = True
                 
             if action != None:
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
                     if fromData:
                         # Add to data book for reference
-                        dataOnlyLob.processOrder(action, fromData, False)
-                        # Use relative pricing to add to exchange
+                        self.dataOnlyLob.processOrder(action, fromData, False)
+                        # Use relative pricing to add to self.exchange
                         if atype == 'limit':
-                            print action['qty']
-                            do_ba = dataOnlyLob.getBestAsk()
-                            do_bb = dataOnlyLob.getBestBid()
-                            c_ba = exchange.getBestAsk()
-                            c_bb = exchange.getBestBid()
+                            do_ba = self.dataOnlyLob.getBestAsk()
+                            do_bb = self.dataOnlyLob.getBestBid()
+                            c_ba = self.exchange.getBestAsk()
+                            c_bb = self.exchange.getBestBid()
                             if do_ba and do_bb and c_ba and c_bb:
                                 data_mid_price = do_bb + (do_ba-do_bb)/2
                                 deviation = ((action['price']-data_mid_price) / 
@@ -140,20 +145,20 @@ class Market(object):
                                 current_mid_price = c_bb + (c_ba-c_bb)/2
                                 action['price'] = (current_mid_price + 
                                                    deviation*current_mid_price)
-                    res_trades, orderInBook = exchange.processOrder(action, 
+                    res_trades, orderInBook = self.exchange.processOrder(action, 
                                                                 fromData, 
                                                                 processVerbose)
                     if res_trades:
                         for t in res_trades:
-                            trades.append(t['price'])
+                            trades.append(t)
                 elif action['type'] == 'cancel':
                     if fromData:
-                        dataOnlyLob.cancelOrder(action['side'], action['idNum'])
-                    exchange.cancelOrder(action['side'], action['idNum'])
+                        self.dataOnlyLob.cancelOrder(action['side'], action['idNum'])
+                    self.exchange.cancelOrder(action['side'], action['idNum'])
                 elif action['type'] == 'modify':
                     if fromData:
-                        dataOnlyLob.modifyOrder(action['idNum'], action)
-                    exchange.modifyOrder(action['idNum'], action)
+                        self.dataOnlyLob.modifyOrder(action['idNum'], action)
+                    self.exchange.modifyOrder(action['idNum'], action)
 
                 # Does the originating trader need to be informed of limit 
                 # orders that has been put in the book?
@@ -173,13 +178,14 @@ class Market(object):
                                                                   trade['party2'][2],
                                                                   bookkeepVerbose)
                     # Traders respond to whatever happened
-                    for t in self.traders.keys():
-                        self.traders[t].respond(time, exchange, 
-                                                trade, respondVerbose)
+                    if self.usingAgents:
+                        for t in self.traders.keys():
+                            self.traders[t].respond(time, self.exchange, 
+                                                    trade, respondVerbose)
             time += 1
 
         # end of an experiment -- dump the tape
-        exchange.tapeDump('transactions.csv', 'w', 'keep')
+        self.exchange.tapeDump('transactions.csv', 'w', 'keep')
  
         # write trade_stats for this experiment NB end-of-session summary only
         self.tradeStats(sessId, dumpFile, time)

@@ -76,18 +76,25 @@ class MarketMaker(Trader):
     def getAction(self, time, time_left, exchange):
         # What should quantity be?
         qty = 2000
+        order = {'qty' : qty,
+                 'type' : 'limit',
+                 'tid' : self.tid}
         if random.random() < 0.5:
             # bid large order just below best bid
             bb = exchange.getBestBid()
             if bb:
-                order = {'price' : bb - exchange.tickSize,
-                         'qty' : qty,
-                         'side' : 'bid',
-                         'tid' : self.tid}
-            return 
+                order['price'] = bb - exchange.tickSize
+                order['side'] = 'bid'
+                return order
         else:
             # ask large order just above best ask
-            pass
+            ba = exchange.getBestAsk()
+            if ba:
+                order['price'] = ba + exchange.tickSize
+                order['side'] = 'ask'
+                return order
+        return None
+        
     
 
 class HFT(Trader):
@@ -98,6 +105,25 @@ class HFT(Trader):
     '''
     
     def getAction(self, time, time_left, exchange):
+        # What should quantity be?
+        qty = 10
+        order = {'qty' : qty,
+                 'type' : 'limit',
+                 'tid' : self.tid}
+        if random.random() < 0.5:
+            # bid small order just above best bid
+            bb = exchange.getBestBid()
+            if bb:
+                order['price'] = bb + exchange.tickSize
+                order['side'] = 'bid'
+                return order
+        else:
+            # ask small order just below best ask
+            ba = exchange.getBestAsk()
+            if ba:
+                order['price'] = ba - exchange.tickSize
+                order['side'] = 'ask'
+                return order
         return None
     
 
@@ -107,7 +133,15 @@ class FBuyer(Trader):
     '''
     
     def getAction(self, time, time_left, exchange):
-        return None
+        # What should qty be?
+        qty = 500
+        order = None
+        if random.random() < 0.1:
+            order = {'qty' : qty,
+                     'type' : 'market',
+                     'side' : 'bid',
+                     'tid' : self.tid}
+        return order
 
 
 class FSeller(Trader):
@@ -116,18 +150,15 @@ class FSeller(Trader):
     '''
     
     def getAction(self, time, time_left, exchange):
-        return None
-    
-    
-class Opportunistic(Trader):
-    '''
-    Opportunistic Traders, who may behave as intermediaries at times, or as
-    fundamental traders at times when they see significant directional moves.
-    '''
-    
-    def getAction(self, time, time_left, exchange):
-        return None
-    
+        # What should qty be?
+        qty = 500
+        order = None
+        if random.random() < 0.1:
+            order = {'qty' : qty,
+                     'type' : 'market',
+                     'side' : 'ask',
+                     'tid' : self.tid}
+        return order
     
     
     

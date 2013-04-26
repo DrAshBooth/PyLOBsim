@@ -19,7 +19,7 @@ X - order cancel
 x - order cancel - long form
 
 '''
-
+import os
 import sys
 from test.test_iterlen import len
 from BinTrees import RBTree
@@ -46,6 +46,7 @@ class DataModel(object):
                 a +=1
             self.numEntries = len(self.infile)
             if verbose: print "lines read"
+            reader.close()
         except IOError:
             sys.exit('Cannot open input file: {}'.format(filename))
             
@@ -216,15 +217,14 @@ def shrinkData(filename, symbol, verbose):
         ids = RBTree()
         for line in reader:
 #             if a > 100000: break # REMEMBER TO TAKE THIS OUT
-            line = line[1:]
-            messageType = line[8]
-            idNum = line[9:21]
+            messageType = line[9]
+            idNum = line[10:22]
             if messageType == 'A':
-                if line[28:34] == symbol:
+                if line[29:35] == symbol:
                     ids.insert(idNum, idNum)
                     writer.write(line)
             elif messageType == 'a':
-                if line[32:38] == symbol:
+                if line[33:39] == symbol:
                     ids.insert(idNum, idNum)
                     writer.write(line)
             elif messageType == 'E':
@@ -244,8 +244,8 @@ def shrinkData(filename, symbol, verbose):
         reader.close()
         writer.close()
 
-if __name__=="__main":
-    shrinkData(sys.argv[0], sys.argv[1], True)
+# os.chdir('/Users/user/Downloads')
+# shrinkData('2013-04-22_EU_pitch', 'MTSe  ', True)
             
             
             
