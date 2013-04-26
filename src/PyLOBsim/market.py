@@ -92,6 +92,7 @@ class Market(object):
         import pylab
         prices = []
         times = []
+        print "Num of trades = ", len(self.exchange.tape)
         for tapeitem in self.exchange.tape:
             prices.append(tapeitem['price'])
             times.append(tapeitem['time'])
