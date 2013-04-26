@@ -20,9 +20,9 @@ x - order cancel - long form
 
 '''
 
-import os
 import sys
 from test.test_iterlen import len
+from BinTrees import RBTree
  
 class DataModel(object):
     
@@ -202,3 +202,55 @@ class DataModel(object):
             return None, False
         else:
             return quote, False
+
+def shrinkData(filename, symbol, verbose):
+    try:
+        if verbose: print "started reading file: {}".format(filename)
+        reader = open(filename,'r')
+    except IOError:
+        sys.exit('Cannot open input file: {}'.format(filename))
+    else:
+        if verbose: print "file in memory, opening outfile"
+        writer = open(filename+'_short','w')
+#         a = 1
+        ids = RBTree()
+        for line in reader:
+#             if a > 100000: break # REMEMBER TO TAKE THIS OUT
+            line = line[1:]
+            messageType = line[8]
+            idNum = line[9:21]
+            if messageType == 'A':
+                if line[28:34] == symbol:
+                    ids.insert(idNum, idNum)
+                    writer.write(line)
+            elif messageType == 'a':
+                if line[32:38] == symbol:
+                    ids.insert(idNum, idNum)
+                    writer.write(line)
+            elif messageType == 'E':
+                if idNum in ids:
+                    writer.write(line)
+            elif messageType == 'e':
+                if idNum in ids:
+                    writer.write(line)
+            elif messageType == 'X':
+                if idNum in ids:
+                    writer.write(line)
+            elif messageType == 'x':
+                if idNum in ids:
+                    writer.write(line)
+#             a +=1
+        if verbose: print "done"
+        reader.close()
+        writer.close()
+
+if __name__=="__main":
+    shrinkData(sys.argv[0], sys.argv[1], True)
+            
+            
+            
+            
+            
+            
+            
+            
