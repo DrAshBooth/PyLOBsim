@@ -205,6 +205,7 @@ class DataModel(object):
             return quote, False
 
 def shrinkData(filename, symbol, verbose):
+    symbol = symbol.ljust(6)
     try:
         if verbose: print "started reading file: {}".format(filename)
         reader = open(filename,'r')
@@ -213,10 +214,8 @@ def shrinkData(filename, symbol, verbose):
     else:
         if verbose: print "file in memory, opening outfile"
         writer = open(filename+'_short','w')
-#         a = 1
         ids = RBTree()
         for line in reader:
-#             if a > 100000: break # REMEMBER TO TAKE THIS OUT
             messageType = line[9]
             idNum = line[10:22]
             if messageType == 'A':
@@ -239,13 +238,12 @@ def shrinkData(filename, symbol, verbose):
             elif messageType == 'x':
                 if idNum in ids:
                     writer.write(line)
-#             a +=1
         if verbose: print "done"
         reader.close()
         writer.close()
 
-# os.chdir('/Users/user/Downloads')
-# shrinkData('2013-04-22_EU_pitch', 'MTSe  ', True)
+#os.chdir('/Users/user/Downloads')
+#shrinkData('2013-04-22_EU_pitch', 'DBKd', True)
             
             
             

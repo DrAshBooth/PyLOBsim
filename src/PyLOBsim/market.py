@@ -14,13 +14,14 @@ class Market(object):
     classdocs
     '''
 
-    def __init__(self, usingAgents, filename=None):
+    def __init__(self, usingAgents, symbol, filename=None):
         '''
         Constructor
         '''
         self.usingAgents = usingAgents
         self.dataModel = None
         self.inDatafile = filename
+        self.symbol  = symbol.ljust(6)
         self.traders = {}
         self.exchange = OrderBook()
         # To keep track of what the state of the book would have been without
@@ -54,7 +55,7 @@ class Market(object):
                     n_agents += 1
             if n_agents < 1:
                 print 'WARNING: No agents specified\n'
-        self.dataModel = DataModel('MTSe  ')
+        self.dataModel = DataModel(self.symbol)
         self.dataModel.readFile(self.inDatafile, verbose)
         if self.usingAgents and verbose :
             for t in range(n_agents):
