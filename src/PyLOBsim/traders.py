@@ -24,8 +24,8 @@ class Trader(object):
         self.tid = tid
         self.balance = balance
         self.blotter = []
-        self.outstandingOrders = {'Bids' : {}, # Both dicts are keyed off
-                                  'Ask' : {}}  # order idNum
+        self.outstandingOrders = {'bid' : {}, # Both dicts are keyed off
+                                  'ask' : {}}  # order idNum
         self.willing = 1
         self.able = 1
         self.lastquote = None
@@ -81,7 +81,7 @@ class MarketMaker(Trader):
         order = {'qty' : qty,
                  'type' : 'limit',
                  'tid' : self.tid}
-        if not self.outstandingOrders['Bids'] or self.outstandingOrders['Asks']:
+        if not self.outstandingOrders['bid'] or self.outstandingOrders['ask']:
             # pick bid or ask randomly
             if random.random() < 0.5:
                 # bid large order just below best bid
@@ -97,14 +97,14 @@ class MarketMaker(Trader):
                     order['price'] = ba + exchange.tickSize
                     order['side'] = 'ask'
                     return order
-        elif not self.outstandingOrders['Bids']:
+        elif not self.outstandingOrders['bid']:
             # submit bid
             bb = exchange.getBestBid()
             if bb:
                 order['price'] = bb - exchange.tickSize
                 order['side'] = 'bid'
                 return order
-        elif not self.outstandingOrders['Asks']:
+        elif not self.outstandingOrders['ask']:
             # submit ask
             ba = exchange.getBestAsk()
             if ba:
@@ -127,7 +127,7 @@ class HFT(Trader):
         order = {'qty' : qty,
                  'type' : 'limit',
                  'tid' : self.tid}
-        if not self.outstandingOrders['Bids'] or self.outstandingOrders['Asks']:
+        if not self.outstandingOrders['bid'] or self.outstandingOrders['ask']:
             # pick bid or ask randomly
             if random.random() < 0.5:
                 # bid small order just above best bid
@@ -143,14 +143,14 @@ class HFT(Trader):
                     order['price'] = ba - exchange.tickSize
                     order['side'] = 'ask'
                     return order
-        elif not self.outstandingOrders['Bids']:
+        elif not self.outstandingOrders['bid']:
             # submit bid
             bb = exchange.getBestBid()
             if bb:
                 order['price'] = bb + exchange.tickSize
                 order['side'] = 'bid'
                 return order
-        elif not self.outstandingOrders['Asks']:
+        elif not self.outstandingOrders['ask']:
             # submit ask
             ba = exchange.getBestAsk()
             if ba:

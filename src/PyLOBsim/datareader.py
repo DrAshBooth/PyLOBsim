@@ -62,6 +62,7 @@ class DataModel(object):
             if messageType == 'A':  # Order added
                 if line[28:34] == self.symbol:
                     quote['type'] = 'limit'
+                    quote['timestamp'] = int(line[:8])
                     quote['idNum'] = idNum
                     if line[21] == 'B':
                         quote['side'] = 'bid'
@@ -77,6 +78,7 @@ class DataModel(object):
                 if line[32:38] == self.symbol:  # Order added - long format
                     quote['type'] = 'limit'
                     quote['idNum'] = idNum
+                    quote['timestamp'] = int(line[:8])
                     if line[21] == 'B':
                         quote['side'] = 'bid'
                     elif line[21] == 'S':
@@ -93,6 +95,7 @@ class DataModel(object):
                     # market bid order
                     quote['type'] = 'market'
                     quote['side'] = 'bid'
+                    quote['timestamp'] = int(line[:8])
                     quote['qty'] = int(line[21:27]) 
                     quote['tid'] = -1
                     break
@@ -101,6 +104,7 @@ class DataModel(object):
                     # market ask order
                     quote['type'] = 'market'
                     quote['side'] = 'ask'
+                    quote['timestamp'] = int(line[:8])
                     quote['qty'] = int(line[21:27]) 
                     quote['tid'] = -1
                     break
@@ -114,6 +118,7 @@ class DataModel(object):
                     # market bid order
                     quote['type'] = 'market'
                     quote['side'] = 'bid'
+                    quote['timestamp'] = int(line[:8])
                     quote['qty'] = int(line[21:31]) 
                     quote['tid'] = -1
                     break
@@ -122,6 +127,7 @@ class DataModel(object):
                     # market ask order
                     quote['type'] = 'market'
                     quote['side'] = 'ask'
+                    quote['timestamp'] = int(line[:8])
                     quote['qty'] = int(line[21:31]) 
                     quote['tid'] = -1
                     break
@@ -138,10 +144,12 @@ class DataModel(object):
                     if num2cancel>=currentQty:
                         quote['type'] = 'cancel'
                         quote['side'] = 'ask'
+                        quote['timestamp'] = int(line[:8])
                         quote['idNum'] = idNum
                     else:
                         quote['type'] = 'modify'
                         quote['side'] = 'ask'
+                        quote['timestamp'] = int(line[:8])
                         quote['idNum'] = idNum
                         quote['price'] = currentOrder.price
                         quote['qty'] = currentQty - num2cancel
@@ -155,10 +163,12 @@ class DataModel(object):
                     if num2cancel>=currentQty:
                         quote['type'] = 'cancel'
                         quote['side'] = 'bid'
+                        quote['timestamp'] = int(line[:8])
                         quote['idNum'] = idNum
                     else:
                         quote['type'] = 'modify'
                         quote['side'] = 'bid'
+                        quote['timestamp'] = int(line[:8])
                         quote['idNum'] = idNum
                         quote['price'] = currentOrder.price
                         quote['qty'] = currentQty - num2cancel
@@ -173,10 +183,12 @@ class DataModel(object):
                     if num2cancel>=currentQty:
                         quote['type'] = 'cancel'
                         quote['side'] = 'ask'
+                        quote['timestamp'] = int(line[:8])
                         quote['idNum'] = idNum
                     else:
                         quote['type'] = 'modify'
                         quote['side'] = 'ask'
+                        quote['timestamp'] = int(line[:8])
                         quote['idNum'] = idNum
                         quote['price'] = currentOrder.price
                         quote['qty'] = currentQty - num2cancel
@@ -190,10 +202,12 @@ class DataModel(object):
                     if num2cancel>=currentQty:
                         quote['type'] = 'cancel'
                         quote['side'] = 'bid'
+                        quote['timestamp'] = int(line[:8])
                         quote['idNum'] = idNum
                     else:
                         quote['type'] = 'modify'
                         quote['side'] = 'bid'
+                        quote['timestamp'] = int(line[:8])
                         quote['idNum'] = idNum
                         quote['price'] = currentOrder.price
                         quote['qty'] = currentQty - num2cancel

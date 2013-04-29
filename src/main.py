@@ -2,6 +2,13 @@
 Created on 15 Apr 2013
 
 @author: Ash Booth
+
+TODO:
+- Sometimes order ids are not in the orderMap but do still exist.
+    * is it that the id is not being added?
+    * or is the order not being removed?
+- Get rid of all agent stuff, try just running DATAlob
+- Make it print every add and remove of order
 '''
 
 if __name__ == '__main__':
@@ -24,7 +31,7 @@ if __name__ == '__main__':
     fname = 'balances.csv'
     dumpFile = open(fname, 'w')
     
-    theMarket.run('1', 10000, traderSpec, dumpFile, 0.4)
+    theMarket.run('1', 1000000, traderSpec, dumpFile, 0.0004)
     theMarket.plotPrices()
     
     

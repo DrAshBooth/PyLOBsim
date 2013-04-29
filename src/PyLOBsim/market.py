@@ -131,22 +131,22 @@ class Market(object):
             if action != None:
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
-                    if fromData:
-                        # Add to data book for reference
-                        self.dataOnlyLob.processOrder(action, fromData, False)
-                        # Use relative pricing to add to self.exchange
-                        if atype == 'limit':
-                            do_ba = self.dataOnlyLob.getBestAsk()
-                            do_bb = self.dataOnlyLob.getBestBid()
-                            c_ba = self.exchange.getBestAsk()
-                            c_bb = self.exchange.getBestBid()
-                            if do_ba and do_bb and c_ba and c_bb:
-                                data_mid_price = do_bb + (do_ba-do_bb)/2
-                                deviation = ((action['price']-data_mid_price) / 
-                                             data_mid_price)
-                                current_mid_price = c_bb + (c_ba-c_bb)/2
-                                action['price'] = (current_mid_price + 
-                                                   deviation*current_mid_price)
+#                    if fromData:
+#                        # Add to data book for reference
+#                        self.dataOnlyLob.processOrder(action, fromData, False)
+#                        # Use relative pricing to add to self.exchange
+#                        if atype == 'limit':
+#                            do_ba = self.dataOnlyLob.getBestAsk()
+#                            do_bb = self.dataOnlyLob.getBestBid()
+#                            c_ba = self.exchange.getBestAsk()
+#                            c_bb = self.exchange.getBestBid()
+#                            if do_ba and do_bb and c_ba and c_bb:
+#                                data_mid_price = do_bb + (do_ba-do_bb)/2
+#                                deviation = ((action['price']-data_mid_price) / 
+#                                             data_mid_price)
+#                                current_mid_price = c_bb + (c_ba-c_bb)/2
+#                                action['price'] = (current_mid_price + 
+#                                                   deviation*current_mid_price)
                     res_trades, orderInBook = self.exchange.processOrder(action, 
                                                                 fromData, 
                                                                 processVerbose)
@@ -155,13 +155,26 @@ class Market(object):
                             trades.append(t)
                 elif action['type'] == 'cancel':
                     if fromData:
-                        self.dataOnlyLob.cancelOrder(action['side'], action['idNum'])
-                    self.exchange.cancelOrder(action['side'], action['idNum'])
+#                        self.dataOnlyLob.cancelOrder(action['side'], 
+#                                                     action['idNum'], 
+#                                                     time = action['timestamp'])
+                        self.exchange.cancelOrder(action['side'], 
+                                                  action['idNum'],
+                                                  time = action['timestamp'])
+                    else:
+                        self.exchange.cancelOrder(action['side'], 
+                                                  action['idNum'])
                 elif action['type'] == 'modify':
                     if fromData:
-                        self.dataOnlyLob.modifyOrder(action['idNum'], action)
-                    self.exchange.modifyOrder(action['idNum'], action)
-
+#                        self.dataOnlyLob.modifyOrder(action['idNum'], 
+#                                                     action, 
+#                                                     time = action['timestamp'])
+                        self.exchange.modifyOrder(action['idNum'], 
+                                                  action,
+                                                  time = action['timestamp'])
+                    else:
+                        self.exchange.modifyOrder(action['idNum'], 
+                                                  action)
                 # Does the originating trader need to be informed of limit 
                 # orders that has been put in the book?
                 if orderInBook and not fromData:
