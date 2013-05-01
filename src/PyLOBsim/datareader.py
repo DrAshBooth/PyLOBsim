@@ -49,6 +49,10 @@ class DataModel(object):
             reader.close()
         except IOError:
             sys.exit('Cannot open input file: {}'.format(filename))
+    
+    def resetModel(self):
+        self.currIndex = -1
+        self.missedMOs = 0
             
     def getNextAction(self, lob):
         quote = {}
@@ -256,8 +260,8 @@ def shrinkData(filename, symbol, verbose):
         reader.close()
         writer.close()
 
-#os.chdir('/Users/user/Downloads')
-#shrinkData('2013-04-22_EU_pitch', 'DBKd', True)
+# os.chdir('/Users/user/Downloads')
+# shrinkData('2013-04-22_EU_pitch', 'DBKd', True)
             
             
             

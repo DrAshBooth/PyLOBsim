@@ -24,10 +24,15 @@ class Market(object):
         self.symbol  = symbol.ljust(6)
         self.traders = {}
         self.exchange = OrderBook()
-        # To keep track of what the state of the book would have been without
-        # the agents, we use a data only LOB. We don't care about the output 
-        # from this. 
-        self.dataOnlyLob = OrderBook()
+        self.dataOnlyPrices = {}
+        
+    def initiateDataModel(self, verbose):
+        '''
+        Creates the traders from traders_spec. 
+        Returns tuple (buyers, sellers).
+        '''
+        self.dataModel = DataModel(self.symbol)
+        self.dataModel.readFile(self.inDatafile, verbose)
         
     def populateMarket(self, tradersSpec, verbose):
         '''
@@ -55,8 +60,6 @@ class Market(object):
                     n_agents += 1
             if n_agents < 1:
                 print 'WARNING: No agents specified\n'
-        self.dataModel = DataModel(self.symbol)
-        self.dataModel.readFile(self.inDatafile, verbose)
         if self.usingAgents and verbose :
             for t in range(n_agents):
                 name = 'B%02d' % t
@@ -65,8 +68,8 @@ class Market(object):
     
     def tradeStats(self, expid, dumpfile, time):
         '''
-        Dumps CSV statistics on self.exchange data and trader population to file for 
-        later analysis.
+        Dumps CSV statistics on self.exchange data and trader population to 
+        file for later analysis.
         '''
         if self.usingAgents:
             trader_types = {}
@@ -104,7 +107,8 @@ class Market(object):
         '''
         One day run of the market
         ''' 
-
+        
+        self.dataModel.resetModel()
         self.populateMarket(traderSpec, False)
 
         processVerbose = False
@@ -204,6 +208,61 @@ class Market(object):
  
         # write trade_stats for this experiment NB end-of-session summary only
         self.tradeStats(sessId, dumpFile, time)
+   
+   
+        
+    def genDataMap(self, endTime, verbose):
+        '''
+        Runs the market with the order book data to create a map of times to
+        prices.
+        ''' 
+        
+        def storePrice(orderTime, lob):
+            bestAsk = lob.getBestAsk()
+            bestBid = lob.getBestBid()
+            midPrice = None
+            if bestAsk and bestBid:
+                midPrice = bestBid + (bestAsk-bestBid)/2
+            self.dataOnlyPrices[orderTime] = midPrice
+
+        self.initiateDataModel(False)
+        dataLOB = OrderBook()
+        processVerbose = False
+
+        l = 0
+        c = 0
+        m = 0
+        time = 0
+        while time < endTime:
+            # Get action from data
+            action, de = self.dataModel.getNextAction(dataLOB)
+            if action != None:
+                storePrice(action['timestamp'], dataLOB)
+                atype = action['type']
+                if atype == 'market' or atype =='limit':
+                    dataLOB.processOrder(action, True, processVerbose)
+                    l+=1
+                elif action['type'] == 'cancel':
+                    dataLOB.cancelOrder(action['side'], 
+                                        action['idNum'],
+                                        time = action['timestamp'])
+                    c+=1
+                elif action['type'] == 'modify':
+                    dataLOB.modifyOrder(action['idNum'], 
+                                        action,
+                                        time = action['timestamp'])
+                    m+=1
+            time += 1
+        if verbose:
+            print "Limits: %d" % l
+            print "Cancels: %d" % c
+            print "Modifys: %d" % m
+        
 
 
 
+
+
+
+
+        
