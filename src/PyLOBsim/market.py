@@ -100,7 +100,7 @@ class Market(object):
         for tapeitem in self.exchange.tape:
             prices.append(tapeitem['price'])
             times.append(tapeitem['time'])
-        pylab.plot(times,prices,'ko')
+        pylab.plot(times,prices,'k')
         pylab.show()
     
     def run(self, sessId, endTime, traderSpec, dumpFile, agentProb):
@@ -119,7 +119,6 @@ class Market(object):
 
         while time < endTime:
             timeLeft = (endTime - time) / endTime
-            #print('%s; t=%08.2f (%4.1f) ' % (sessId, time, timeLeft*100))
             trades = []
             if self.usingAgents and random.random() < agentProb:
                 # Get action from agents
@@ -128,29 +127,23 @@ class Market(object):
                 fromData = False
             else:
                 # Get action from data
-                action, day_ended = self.dataModel.getNextAction(self.exchange)
-                # RELATIVE PRICING PLEASE!!!!!
+                action, de = self.dataModel.getNextAction(self.exchange)
                 fromData = True
-                
             if action != None:
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
-#                    if fromData:
-#                        # Add to data book for reference
-#                        self.dataOnlyLob.processOrder(action, fromData, False)
-#                        # Use relative pricing to add to self.exchange
-#                        if atype == 'limit':
-#                            do_ba = self.dataOnlyLob.getBestAsk()
-#                            do_bb = self.dataOnlyLob.getBestBid()
-#                            c_ba = self.exchange.getBestAsk()
-#                            c_bb = self.exchange.getBestBid()
-#                            if do_ba and do_bb and c_ba and c_bb:
-#                                data_mid_price = do_bb + (do_ba-do_bb)/2
-#                                deviation = ((action['price']-data_mid_price) / 
-#                                             data_mid_price)
-#                                current_mid_price = c_bb + (c_ba-c_bb)/2
-#                                action['price'] = (current_mid_price + 
-#                                                   deviation*current_mid_price)
+                    if fromData:
+                        # Use relative pricing to modify price
+                        if atype == 'limit':
+                            refPrice = self.dataOnlyPrices[action['timestamp']]
+                            bestA= self.exchange.getBestAsk()
+                            bestB = self.exchange.getBestBid()
+                            if bestA and bestB and refPrice:
+                                deviation = ((action['price']-refPrice) / 
+                                             refPrice)
+                                current_mid_price = bestB + (bestA-bestB)/2
+#                                 action['price'] = (current_mid_price + 
+#                                                    deviation*current_mid_price)
                     res_trades, orderInBook = self.exchange.processOrder(action, 
                                                                 fromData, 
                                                                 processVerbose)
@@ -159,9 +152,6 @@ class Market(object):
                             trades.append(t)
                 elif action['type'] == 'cancel':
                     if fromData:
-#                        self.dataOnlyLob.cancelOrder(action['side'], 
-#                                                     action['idNum'], 
-#                                                     time = action['timestamp'])
                         self.exchange.cancelOrder(action['side'], 
                                                   action['idNum'],
                                                   time = action['timestamp'])
@@ -170,9 +160,6 @@ class Market(object):
                                                   action['idNum'])
                 elif action['type'] == 'modify':
                     if fromData:
-#                        self.dataOnlyLob.modifyOrder(action['idNum'], 
-#                                                     action, 
-#                                                     time = action['timestamp'])
                         self.exchange.modifyOrder(action['idNum'], 
                                                   action,
                                                   time = action['timestamp'])
@@ -180,7 +167,7 @@ class Market(object):
                         self.exchange.modifyOrder(action['idNum'], 
                                                   action)
                 # Does the originating trader need to be informed of limit 
-                # orders that has been put in the book?
+                # orders that have been put in the book?
                 if orderInBook and not fromData:
                     self.traders[tid].orderInBook(orderInBook)
                     
@@ -209,8 +196,6 @@ class Market(object):
         # write trade_stats for this experiment NB end-of-session summary only
         self.tradeStats(sessId, dumpFile, time)
    
-   
-        
     def genDataMap(self, endTime, verbose):
         '''
         Runs the market with the order book data to create a map of times to
