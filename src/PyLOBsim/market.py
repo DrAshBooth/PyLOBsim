@@ -8,6 +8,7 @@ import random
 from PyLOB import OrderBook
 from datareader import DataModel
 from traders import MarketMaker, HFT, FBuyer, FSeller
+from matplotlib.testing.jpl_units import day
 
 class Market(object):
     '''
@@ -103,7 +104,7 @@ class Market(object):
         pylab.plot(times,prices,'k')
         pylab.show()
     
-    def run(self, sessId, endTime, traderSpec, dumpFile, agentProb):
+    def run(self, sessId, statTime, endTime, traderSpec, dumpFile, agentProb):
         '''
         One day run of the market
         ''' 
@@ -116,9 +117,11 @@ class Market(object):
         bookkeepVerbose = False
         
         time = 0
-
-        while time < endTime:
+        day_ended = False
+        while not day_ended:
             timeLeft = (endTime - time) / endTime
+            if time % 10000 == 0:
+                print "time is %d" % time
             trades = []
             if self.usingAgents and random.random() < agentProb:
                 # Get action from agents
@@ -127,7 +130,7 @@ class Market(object):
                 fromData = False
             else:
                 # Get action from data
-                action, de = self.dataModel.getNextAction(self.exchange)
+                action, day_ended = self.dataModel.getNextAction(self.exchange)
                 fromData = True
             if action != None:
                 atype = action['type']
@@ -189,14 +192,15 @@ class Market(object):
                             self.traders[t].respond(time, self.exchange, 
                                                     trade, respondVerbose)
             time += 1
-
+        
+        print "experiment finished..."
         # end of an experiment -- dump the tape
         self.exchange.tapeDump('transactions.csv', 'w', 'keep')
  
         # write trade_stats for this experiment NB end-of-session summary only
         self.tradeStats(sessId, dumpFile, time)
    
-    def genDataMap(self, endTime, verbose):
+    def genDataMap(self, startTime, endTime, verbose):
         '''
         Runs the market with the order book data to create a map of times to
         prices.
@@ -217,16 +221,22 @@ class Market(object):
         l = 0
         c = 0
         m = 0
+        ma = 0
         time = 0
-        while time < endTime:
-            # Get action from data
-            action, de = self.dataModel.getNextAction(dataLOB)
+        dayEnded = False
+        while not dayEnded:
+            if time % 10000 == 0:
+                print "time is %d" % time
+            action, dayEnded = self.dataModel.getNextAction(dataLOB)
             if action != None:
                 storePrice(action['timestamp'], dataLOB)
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
                     dataLOB.processOrder(action, True, processVerbose)
-                    l+=1
+                    if atype == 'market':
+                        ma+=1
+                    else:
+                        l+=1
                 elif action['type'] == 'cancel':
                     dataLOB.cancelOrder(action['side'], 
                                         action['idNum'],
@@ -242,6 +252,7 @@ class Market(object):
             print "Limits: %d" % l
             print "Cancels: %d" % c
             print "Modifys: %d" % m
+            print "Markets: %d" % ma
         
 
 

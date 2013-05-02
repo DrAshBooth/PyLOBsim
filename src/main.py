@@ -12,7 +12,7 @@ if __name__ == '__main__':
     from PyLOBsim import Market
     import os
     
-    os.chdir('/Users/User/Downloads')
+    os.chdir('/Users/user/git/PyLOBsim/src/Data')
     
     theMarket = Market(False, 'DBKd', '2013-04-22_EU_pitch_short')
     
@@ -24,11 +24,13 @@ if __name__ == '__main__':
     fname = 'balances.csv'
     dumpFile = open(fname, 'w')
     
-    runLength = 10000
+    start_time = 28802147
+    end_time = 59400001
+#     runLength = 10000
     
-    theMarket.genDataMap(runLength, True)
+    theMarket.genDataMap(start_time, end_time, True)
     
-    theMarket.run('1', runLength, traderSpec, dumpFile, 0.0004)
+    theMarket.run('1', start_time, end_time, traderSpec, dumpFile, 0.0004)
     theMarket.plotPrices()
     
     

@@ -56,10 +56,10 @@ class DataModel(object):
             
     def getNextAction(self, lob):
         quote = {}
-        for i in range(self.currIndex, self.numEntries):
+        if self.currIndex >= (self.numEntries-3):
+            return None, True # Day has ended
+        for i in range(self.currIndex, self.numEntries-1):
             self.currIndex += 1
-            if self.currIndex>(len(self.infile)-1): 
-                return None, True
             line = self.infile[self.currIndex]
             messageType = line[8]
             idNum = line[9:21]
