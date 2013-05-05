@@ -8,7 +8,6 @@ import random
 from PyLOB import OrderBook
 from datareader import DataModel
 from traders import MarketMaker, HFT, FBuyer, FSeller
-from matplotlib.testing.jpl_units import day
 
 class Market(object):
     '''
@@ -26,6 +25,8 @@ class Market(object):
         self.traders = {}
         self.exchange = OrderBook()
         self.dataOnlyPrices = {}
+        self.beforePrices = []
+        self.afterPrices = []
         
     def initiateDataModel(self, verbose):
         '''
@@ -144,9 +145,16 @@ class Market(object):
                             if bestA and bestB and refPrice:
                                 deviation = ((action['price']-refPrice) / 
                                              refPrice)
-                                current_mid_price = bestB + (bestA-bestB)/2
-#                                 action['price'] = (current_mid_price + 
-#                                                    deviation*current_mid_price)
+                                current_mid_price = bestB + (bestA-bestB)/2.0
+                                print "Original price:\t%f" % action['price']
+                                print "Modified price:\t%f\n" % (current_mid_price + deviation*current_mid_price)
+                                self.beforePrices.append({'time' : action['timestamp'],
+                                                          'price' : action['price']})
+                                self.afterPrices.append({'time' : action['timestamp'],
+                                                         'price' : (current_mid_price + 
+                                                   deviation*current_mid_price)})
+#                                action['price'] = (current_mid_price + 
+#                                                   deviation*current_mid_price)
                     res_trades, orderInBook = self.exchange.processOrder(action, 
                                                                 fromData, 
                                                                 processVerbose)
@@ -211,7 +219,7 @@ class Market(object):
             bestBid = lob.getBestBid()
             midPrice = None
             if bestAsk and bestBid:
-                midPrice = bestBid + (bestAsk-bestBid)/2
+                midPrice = bestBid + (bestAsk-bestBid)/2.0
             self.dataOnlyPrices[orderTime] = midPrice
 
         self.initiateDataModel(False)

@@ -31,6 +31,7 @@ if __name__ == '__main__':
     theMarket.genDataMap(start_time, end_time, True)
     
     theMarket.run('1', start_time, end_time, traderSpec, dumpFile, 0.0004)
+
     theMarket.plotPrices()
     
     
