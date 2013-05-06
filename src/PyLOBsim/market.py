@@ -136,25 +136,21 @@ class Market(object):
             if action != None:
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
-                    if fromData:
-                        # Use relative pricing to modify price
-                        if atype == 'limit':
-                            refPrice = self.dataOnlyPrices[action['timestamp']]
-                            bestA= self.exchange.getBestAsk()
-                            bestB = self.exchange.getBestBid()
-                            if bestA and bestB and refPrice:
-                                deviation = ((action['price']-refPrice) / 
-                                             refPrice)
-                                current_mid_price = bestB + (bestA-bestB)/2.0
-                                print "Original price:\t%f" % action['price']
-                                print "Modified price:\t%f\n" % (current_mid_price + deviation*current_mid_price)
-                                self.beforePrices.append({'time' : action['timestamp'],
-                                                          'price' : action['price']})
-                                self.afterPrices.append({'time' : action['timestamp'],
-                                                         'price' : (current_mid_price + 
-                                                   deviation*current_mid_price)})
-#                                action['price'] = (current_mid_price + 
-#                                                   deviation*current_mid_price)
+                    if fromData and atype == 'limit':
+                        bestA= self.exchange.getBestAsk()
+                        bestB = self.exchange.getBestBid()
+                        if bestA!=None and bestB!=None:
+                            refPrice = self.dataOnlyPrices[(action['timestamp'], 
+                                                            action['idNum'], 
+                                                            action['price'])]
+                            deviation = ((action['price']-refPrice) / 
+                                         refPrice)
+                            current_mid_price = bestB + (bestA-bestB)/2.0
+                            print "Original price:\t%f" % action['price']
+                            print "Modified price:\t%f\n" % (current_mid_price + deviation*current_mid_price)
+                            newPrice = (current_mid_price + 
+                                        deviation*current_mid_price)
+#                            action['price'] = newPrice
                     res_trades, orderInBook = self.exchange.processOrder(action, 
                                                                 fromData, 
                                                                 processVerbose)
@@ -212,15 +208,19 @@ class Market(object):
         '''
         Runs the market with the order book data to create a map of times to
         prices.
-        ''' 
+        '''
         
-        def storePrice(orderTime, lob):
+        
+        def storePrice(action, lob):
+            orderTime = action['timestamp']
+            idNum = action['idNum']
+            orderPrice = action['price']
             bestAsk = lob.getBestAsk()
             bestBid = lob.getBestBid()
             midPrice = None
-            if bestAsk and bestBid:
+            if bestAsk!=None and bestBid!=None:
                 midPrice = bestBid + (bestAsk-bestBid)/2.0
-            self.dataOnlyPrices[orderTime] = midPrice
+                self.dataOnlyPrices[(orderTime, idNum, orderPrice)] = midPrice
 
         self.initiateDataModel(False)
         dataLOB = OrderBook()
@@ -237,14 +237,14 @@ class Market(object):
                 print "time is %d" % time
             action, dayEnded = self.dataModel.getNextAction(dataLOB)
             if action != None:
-                storePrice(action['timestamp'], dataLOB)
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
-                    dataLOB.processOrder(action, True, processVerbose)
                     if atype == 'market':
                         ma+=1
                     else:
+                        storePrice(action, dataLOB)
                         l+=1
+                    dataLOB.processOrder(action, True, processVerbose)
                 elif action['type'] == 'cancel':
                     dataLOB.cancelOrder(action['side'], 
                                         action['idNum'],
