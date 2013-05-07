@@ -26,7 +26,6 @@ if __name__ == '__main__':
     
     start_time = 28802147
     end_time = 59400001
-#     runLength = 10000
     
     theMarket.genDataMap(start_time, end_time, True)
     

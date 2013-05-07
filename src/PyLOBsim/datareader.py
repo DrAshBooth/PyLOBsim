@@ -30,6 +30,7 @@ class DataModel(object):
         self.infile = []
         self.numEntries = None
         self.currIndex = -1
+        self.nextUEI = 0    # Unique event identifier
         self.symbol = symbol
         self.missedMOs = 0
     
@@ -38,12 +39,9 @@ class DataModel(object):
             if verbose: print "started reading file: {}".format(filename)
             reader = open(filename,'r')
             if verbose: print "file in memory, loading lines into list"
-            a = 1
             for line in reader:
-                if a > 100000: break # REMEMBER TO TAKE THIS OUT
                 line = line[1:]
                 self.infile.append(line)
-                a +=1
             self.numEntries = len(self.infile)
             if verbose: print "lines read"
             reader.close()
@@ -53,6 +51,7 @@ class DataModel(object):
     def resetModel(self):
         self.currIndex = -1
         self.missedMOs = 0
+        self.nextUEI = 0
             
     def getNextAction(self, lob):
         quote = {}
@@ -220,6 +219,8 @@ class DataModel(object):
         if not quote:
             return None, False
         else:
+            quote['uei'] = self.nextUEI
+            self.nextUEI += 1
             return quote, False
 
 def shrinkData(filename, symbol, verbose):

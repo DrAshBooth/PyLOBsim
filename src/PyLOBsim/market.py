@@ -8,6 +8,8 @@ import random
 from PyLOB import OrderBook
 from datareader import DataModel
 from traders import MarketMaker, HFT, FBuyer, FSeller
+from compiler.ast import And
+from scimath.units.time import milliseconds
 
 class Market(object):
     '''
@@ -90,7 +92,8 @@ class Market(object):
             for ttype in sorted(list(trader_types.keys())):
                     n = trader_types[ttype]['n']
                     s = trader_types[ttype]['balance_sum']
-                    dumpfile.write('%s, %d, %d, %f, ' % (ttype, s, n, s / float(n)))
+                    dumpfile.write('%s, %d, %d, %f, ' % 
+                                   (ttype, s, n, s / float(n)))
     
             dumpfile.write('\n');
     
@@ -105,10 +108,18 @@ class Market(object):
         pylab.plot(times,prices,'k')
         pylab.show()
     
-    def run(self, sessId, statTime, endTime, traderSpec, dumpFile, agentProb):
+    def run(self, sessId, startTime, endTime, traderSpec, dumpFile, agentProb):
         '''
         One day run of the market
         ''' 
+        
+        def printTime(milliseconds):
+            x = milliseconds / 1000
+            seconds = x % 60
+            x /= 60
+            minutes = x % 60
+            x /= 60
+            hours = x % 24
         
         self.dataModel.resetModel()
         self.populateMarket(traderSpec, False)
@@ -117,12 +128,14 @@ class Market(object):
         respondVerbose = False
         bookkeepVerbose = False
         
-        time = 0
+        time = startTime
         day_ended = False
         while not day_ended:
             timeLeft = (endTime - time) / endTime
             if time % 10000 == 0:
                 print "time is %d" % time
+            if ((time / 360000) % 24) == 0:
+                print printTime(time)
             trades = []
             if self.usingAgents and random.random() < agentProb:
                 # Get action from agents
@@ -134,23 +147,25 @@ class Market(object):
                 action, day_ended = self.dataModel.getNextAction(self.exchange)
                 fromData = True
             if action != None:
+                time = action['timestamp']
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
                     if fromData and atype == 'limit':
                         bestA= self.exchange.getBestAsk()
                         bestB = self.exchange.getBestBid()
                         if bestA!=None and bestB!=None:
-                            refPrice = self.dataOnlyPrices[(action['timestamp'], 
-                                                            action['idNum'], 
-                                                            action['price'])]
+                            refPrice = self.dataOnlyPrices[action['uei']]
                             deviation = ((action['price']-refPrice) / 
                                          refPrice)
                             current_mid_price = bestB + (bestA-bestB)/2.0
-                            print "Original price:\t%f" % action['price']
-                            print "Modified price:\t%f\n" % (current_mid_price + deviation*current_mid_price)
                             newPrice = (current_mid_price + 
                                         deviation*current_mid_price)
-#                            action['price'] = newPrice
+                            if newPrice != action['price']:
+                                print newPrice
+                                print action['price']
+                                print '\n'
+                                pass
+                            action['price'] = newPrice
                     res_trades, orderInBook = self.exchange.processOrder(action, 
                                                                 fromData, 
                                                                 processVerbose)
@@ -195,7 +210,6 @@ class Market(object):
                         for t in self.traders.keys():
                             self.traders[t].respond(time, self.exchange, 
                                                     trade, respondVerbose)
-            time += 1
         
         print "experiment finished..."
         # end of an experiment -- dump the tape
@@ -212,19 +226,18 @@ class Market(object):
         
         
         def storePrice(action, lob):
-            orderTime = action['timestamp']
-            idNum = action['idNum']
-            orderPrice = action['price']
             bestAsk = lob.getBestAsk()
             bestBid = lob.getBestBid()
             midPrice = None
             if bestAsk!=None and bestBid!=None:
                 midPrice = bestBid + (bestAsk-bestBid)/2.0
-                self.dataOnlyPrices[(orderTime, idNum, orderPrice)] = midPrice
+                self.dataOnlyPrices[action['uei']] = midPrice
 
-        self.initiateDataModel(False)
+        self.initiateDataModel(verbose)
         dataLOB = OrderBook()
         processVerbose = False
+        
+        if verbose: print "\nCreating data map..."
 
         l = 0
         c = 0
@@ -238,12 +251,12 @@ class Market(object):
             action, dayEnded = self.dataModel.getNextAction(dataLOB)
             if action != None:
                 atype = action['type']
-                if atype == 'market' or atype =='limit':
-                    if atype == 'market':
-                        ma+=1
-                    else:
-                        storePrice(action, dataLOB)
-                        l+=1
+                if atype == 'market': 
+                    ma+=1
+                    dataLOB.processOrder(action, True, processVerbose)
+                elif atype =='limit':
+                    storePrice(action, dataLOB)
+                    l+=1
                     dataLOB.processOrder(action, True, processVerbose)
                 elif action['type'] == 'cancel':
                     dataLOB.cancelOrder(action['side'], 
@@ -257,6 +270,7 @@ class Market(object):
                     m+=1
             time += 1
         if verbose:
+            print "\nCreated data map..."
             print "Limits: %d" % l
             print "Cancels: %d" % c
             print "Modifys: %d" % m
