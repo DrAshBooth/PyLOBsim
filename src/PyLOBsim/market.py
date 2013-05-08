@@ -130,6 +130,7 @@ class Market(object):
         
         time = startTime
         day_ended = False
+        cheats=0
         while not day_ended:
             timeLeft = (endTime - time) / endTime
             if time % 10000 == 0:
@@ -147,25 +148,30 @@ class Market(object):
                 action, day_ended = self.dataModel.getNextAction(self.exchange)
                 fromData = True
             if action != None:
-                time = action['timestamp']
+                if 'timestamp' in action:
+                    time = action['timestamp']
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
-                    if fromData and atype == 'limit':
-                        bestA= self.exchange.getBestAsk()
-                        bestB = self.exchange.getBestBid()
-                        if bestA!=None and bestB!=None:
-                            refPrice = self.dataOnlyPrices[action['uei']]
-                            deviation = ((action['price']-refPrice) / 
-                                         refPrice)
-                            current_mid_price = bestB + (bestA-bestB)/2.0
-                            newPrice = (current_mid_price + 
-                                        deviation*current_mid_price)
-                            if newPrice != action['price']:
-                                print newPrice
-                                print action['price']
-                                print '\n'
-                                pass
-                            action['price'] = newPrice
+#                     if fromData and atype == 'limit':
+#                         bestA= self.exchange.getBestAsk()
+#                         bestB = self.exchange.getBestBid()
+#                         if bestA!=None and bestB!=None:
+#                             if action['uei'] in self.dataOnlyPrices:
+#                                 refPrice = self.dataOnlyPrices[action['uei']]
+#                             else:
+#                                 refPrice = action['price']
+#                                 cheats+=1
+#                             deviation = ((action['price']-refPrice) / 
+#                                          refPrice)
+#                             current_mid_price = bestB + (bestA-bestB)/2.0
+#                             newPrice = (current_mid_price + 
+#                                         deviation*current_mid_price)
+# #                             if newPrice != action['price']:
+# #                                 print newPrice
+# #                                 print action['price']
+# #                                 print '\n'
+# #                                 pass
+#                             action['price'] = newPrice
                     res_trades, orderInBook = self.exchange.processOrder(action, 
                                                                 fromData, 
                                                                 processVerbose)
@@ -212,6 +218,7 @@ class Market(object):
                                                     trade, respondVerbose)
         
         print "experiment finished..."
+        print " num cheats: ", cheats
         # end of an experiment -- dump the tape
         self.exchange.tapeDump('transactions.csv', 'w', 'keep')
  

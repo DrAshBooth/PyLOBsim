@@ -81,36 +81,36 @@ class MarketMaker(Trader):
         order = {'qty' : qty,
                  'type' : 'limit',
                  'tid' : self.tid}
-        if not self.outstandingOrders['bid'] or self.outstandingOrders['ask']:
-            # pick bid or ask randomly
-            if random.random() < 0.5:
-                # bid large order just below best bid
-                bb = exchange.getBestBid()
-                if bb:
-                    order['price'] = bb - exchange.tickSize
-                    order['side'] = 'bid'
-                    return order
-            else:
-                # ask large order just above best ask
-                ba = exchange.getBestAsk()
-                if ba:
-                    order['price'] = ba + exchange.tickSize
-                    order['side'] = 'ask'
-                    return order
-        elif not self.outstandingOrders['bid']:
-            # submit bid
-            bb = exchange.getBestBid()
-            if bb:
-                order['price'] = bb - exchange.tickSize
-                order['side'] = 'bid'
-                return order
-        elif not self.outstandingOrders['ask']:
-            # submit ask
-            ba = exchange.getBestAsk()
-            if ba:
-                order['price'] = ba + exchange.tickSize
-                order['side'] = 'ask'
-                return order
+#         if not self.outstandingOrders['bid'] or self.outstandingOrders['ask']:
+#             # pick bid or ask randomly
+#             if random.random() < 0.5:
+#                 # bid large order just below best bid
+#                 bb = exchange.getBestBid()
+#                 if bb:
+#                     order['price'] = bb - exchange.tickSize
+#                     order['side'] = 'bid'
+#                     return order
+#             else:
+#                 # ask large order just above best ask
+#                 ba = exchange.getBestAsk()
+#                 if ba:
+#                     order['price'] = ba + exchange.tickSize
+#                     order['side'] = 'ask'
+#                     return order
+#         elif not self.outstandingOrders['bid']:
+#             # submit bid
+#             bb = exchange.getBestBid()
+#             if bb:
+#                 order['price'] = bb - exchange.tickSize
+#                 order['side'] = 'bid'
+#                 return order
+#         elif not self.outstandingOrders['ask']:
+#             # submit ask
+#             ba = exchange.getBestAsk()
+#             if ba:
+#                 order['price'] = ba + exchange.tickSize
+#                 order['side'] = 'ask'
+#                 return order
         return None
     
 
@@ -123,7 +123,7 @@ class HFT(Trader):
     
     def getAction(self, time, time_left, exchange):
         # What should quantity be?
-        qty = 10
+        qty = 1
         order = {'qty' : qty,
                  'type' : 'limit',
                  'tid' : self.tid}

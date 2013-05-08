@@ -14,7 +14,7 @@ if __name__ == '__main__':
     
     os.chdir('/Users/user/git/PyLOBsim/src/Data')
     
-    theMarket = Market(False, 'DBKd', '2013-04-22_EU_pitch_short')
+    theMarket = Market(True, 'DBKd', '2013-04-22_EU_pitch_short')
     
     traderSpec = [('MM', 100),
                   ('HFT', 1),
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     
     theMarket.genDataMap(start_time, end_time, True)
     
-    theMarket.run('1', start_time, end_time, traderSpec, dumpFile, 0.0004)
+    theMarket.run('1', start_time, end_time, traderSpec, dumpFile, 0.01)
 
     theMarket.plotPrices()
     

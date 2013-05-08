@@ -39,9 +39,12 @@ class DataModel(object):
             if verbose: print "started reading file: {}".format(filename)
             reader = open(filename,'r')
             if verbose: print "file in memory, loading lines into list"
+            a = 1
             for line in reader:
+                if a > 100000: break
                 line = line[1:]
                 self.infile.append(line)
+                a+=1
             self.numEntries = len(self.infile)
             if verbose: print "lines read"
             reader.close()
