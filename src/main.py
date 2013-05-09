@@ -26,9 +26,8 @@ if __name__ == '__main__':
     
     start_time = 28802147
     end_time = 59400001
-    
-    theMarket.genDataMap(start_time, end_time, True)
-    
+
+    theMarket.initiateDataModel(True)
     theMarket.run('1', start_time, end_time, traderSpec, dumpFile, 0.01)
 
     theMarket.plotPrices()

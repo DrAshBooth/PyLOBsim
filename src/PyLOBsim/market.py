@@ -6,7 +6,7 @@ Created on 16 Apr 2013
 import sys
 import random
 from PyLOB import OrderBook
-from datareader import DataModel
+from datareader import DataModel 
 from traders import MarketMaker, HFT, FBuyer, FSeller
 from compiler.ast import And
 from scimath.units.time import milliseconds
@@ -26,6 +26,7 @@ class Market(object):
         self.symbol  = symbol.ljust(6)
         self.traders = {}
         self.exchange = OrderBook()
+        self.dataLOB = OrderBook()
         self.dataOnlyPrices = {}
         self.beforePrices = []
         self.afterPrices = []
@@ -123,25 +124,25 @@ class Market(object):
         
         self.dataModel.resetModel()
         self.populateMarket(traderSpec, False)
-
+        
         processVerbose = False
         respondVerbose = False
         bookkeepVerbose = False
         
         time = startTime
+        time = 0
         day_ended = False
-        cheats=0
         while not day_ended:
             timeLeft = (endTime - time) / endTime
             if time % 10000 == 0:
                 print "time is %d" % time
-            if ((time / 360000) % 24) == 0:
-                print printTime(time)
             trades = []
             if self.usingAgents and random.random() < agentProb:
                 # Get action from agents
                 tid = random.choice(self.traders.keys())
-                action = self.traders[tid].getAction(time, timeLeft, self.exchange)
+                action = self.traders[tid].getAction(time, 
+                                                     timeLeft, 
+                                                     self.exchange)
                 fromData = False
             else:
                 # Get action from data
@@ -152,26 +153,27 @@ class Market(object):
                     time = action['timestamp']
                 atype = action['type']
                 if atype == 'market' or atype =='limit':
-#                     if fromData and atype == 'limit':
-#                         bestA= self.exchange.getBestAsk()
-#                         bestB = self.exchange.getBestBid()
-#                         if bestA!=None and bestB!=None:
-#                             if action['uei'] in self.dataOnlyPrices:
-#                                 refPrice = self.dataOnlyPrices[action['uei']]
-#                             else:
-#                                 refPrice = action['price']
-#                                 cheats+=1
-#                             deviation = ((action['price']-refPrice) / 
-#                                          refPrice)
-#                             current_mid_price = bestB + (bestA-bestB)/2.0
-#                             newPrice = (current_mid_price + 
-#                                         deviation*current_mid_price)
-# #                             if newPrice != action['price']:
-# #                                 print newPrice
-# #                                 print action['price']
-# #                                 print '\n'
-# #                                 pass
-#                             action['price'] = newPrice
+                    if fromData:
+                        if atype == 'limit':
+                            oriBA = self.dataLOB.getBestAsk()
+                            oriBB = self.dataLOB.getBestBid()
+                            newBA = self.exchange.getBestAsk()
+                            newBB = self.exchange.getBestBid()
+                            if (oriBA != None and oriBB != None and 
+                                newBA != None and newBB != None):
+                                oriMid = oriBB + (oriBA-oriBB)/2.0
+                                newMid = newBB + (newBA-newBB)/2.0
+                                deviation = ((action['price']-oriMid) / oriMid)
+                                newPrice = newMid + (newMid*deviation)
+                                if newPrice != action['price']:
+                                    print newPrice
+                                    print action['price']
+                                    print '\n'
+                                    pass
+                                action['price'] = newPrice
+                        self.dataLOB.processOrder(action, 
+                                                  True, 
+                                                  processVerbose)
                     res_trades, orderInBook = self.exchange.processOrder(action, 
                                                                 fromData, 
                                                                 processVerbose)
@@ -183,6 +185,9 @@ class Market(object):
                         self.exchange.cancelOrder(action['side'], 
                                                   action['idNum'],
                                                   time = action['timestamp'])
+                        self.dataLOB.cancelOrder(action['side'], 
+                                             action['idNum'],
+                                             time = action['timestamp'])
                     else:
                         self.exchange.cancelOrder(action['side'], 
                                                   action['idNum'])
@@ -191,6 +196,9 @@ class Market(object):
                         self.exchange.modifyOrder(action['idNum'], 
                                                   action,
                                                   time = action['timestamp'])
+                        self.dataLOB.modifyOrder(action['idNum'], 
+                                             action,
+                                             time = action['timestamp'])
                     else:
                         self.exchange.modifyOrder(action['idNum'], 
                                                   action)
@@ -216,9 +224,8 @@ class Market(object):
                         for t in self.traders.keys():
                             self.traders[t].respond(time, self.exchange, 
                                                     trade, respondVerbose)
-        
+            time+=1
         print "experiment finished..."
-        print " num cheats: ", cheats
         # end of an experiment -- dump the tape
         self.exchange.tapeDump('transactions.csv', 'w', 'keep')
  
@@ -230,7 +237,6 @@ class Market(object):
         Runs the market with the order book data to create a map of times to
         prices.
         '''
-        
         
         def storePrice(action, lob):
             bestAsk = lob.getBestAsk()
