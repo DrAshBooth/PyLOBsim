@@ -8,8 +8,6 @@ import random
 from PyLOB import OrderBook
 from datareader import DataModel 
 from traders import MarketMaker, HFT, FBuyer, FSeller
-from compiler.ast import And
-from scimath.units.time import milliseconds
 
 class Market(object):
     '''
@@ -114,13 +112,13 @@ class Market(object):
         One day run of the market
         ''' 
         
-        def printTime(milliseconds):
-            x = milliseconds / 1000
-            seconds = x % 60
-            x /= 60
-            minutes = x % 60
-            x /= 60
-            hours = x % 24
+#         def printTime(milliseconds):
+#             x = milliseconds / 1000
+#             seconds = x % 60
+#             x /= 60
+#             minutes = x % 60
+#             x /= 60
+#             hours = x % 24
         
         self.dataModel.resetModel()
         self.populateMarket(traderSpec, False)

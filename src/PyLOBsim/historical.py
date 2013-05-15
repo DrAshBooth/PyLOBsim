@@ -5,6 +5,9 @@ Created on May 14, 2013
 
 '''
 
+from datareader import DataModel
+from PyLOB import OrderBook
+
 class VWAP(object):
     
     def __init__(self):
@@ -42,15 +45,74 @@ class VWAP(object):
                       '2013-02-12_EU_pitch_short']
         self.numFiles = len(self.files)
         
-    def getVWAPs(self, startTime, endTime, numBins, numDays=30):
+    def getVWAPs(self, startTime, endTime, numBins, symbol, numDays=30):
+        symbol = symbol.ljust(6)
         if numDays>self.numFiles:
             print "\nWarning, do not have enough data for %d day VWAP" % numDays
             print "capping to %d\n" % self.numFiles
             numDays = self.numFiles
             
         props = []
-        lenOfDay = endTime=startTime
+        lenOfDay = endTime-startTime
         binSize = lenOfDay/numBins
         
-        for d in numDays:
+        for d in range(numDays):
+            print "Day %d" % d
             f = self.files[d]
+            
+            dataModel = DataModel(symbol)
+            dataModel.readFile(f, False)
+            
+            exchange = OrderBook()
+            
+            processVerbose = False
+            
+            time = startTime
+            day_ended = False
+            
+            vols = []
+            for i in range(numBins):
+                vols.append(0)
+            
+            while not day_ended:
+                
+                # Get action from data
+                action, day_ended = dataModel.getNextAction(exchange)
+                if day_ended:
+                    pass
+                if action != None:
+                    time = action['timestamp']
+                    atype = action['type']
+                    if atype == 'market' or atype =='limit':
+                        res_trades, orderInBook = exchange.processOrder(action, 
+                                                                        True,
+                                                                        processVerbose)
+                        if res_trades:
+                            for t in res_trades:
+                                if (time-startTime)/binSize >= len(vols):
+                                    pass
+                                vols[(time-startTime)/binSize] += t['qty']
+                                
+                    elif action['type'] == 'cancel':
+                        exchange.cancelOrder(action['side'], 
+                                             action['idNum'],
+                                             time = action['timestamp'])
+
+                    elif action['type'] == 'modify':
+                        exchange.modifyOrder(action['idNum'], 
+                                             action,
+                                             time = action['timestamp'])
+                        
+            # Day over, work out proportions and add to props
+            totalVol = sum(vols)
+            props.append([v/float(totalVol) for v in vols])
+            print "volumes: ", vols
+            print "proportions: ", [v/float(totalVol) for v in vols], '\n'
+        # Calculate average props
+        sums = [0 for i in range(numBins)]
+        for day in props:
+            for bin_index in range(numBins):
+                sums[bin_index] += day[bin_index]
+        return [s/numDays for s in sums]
+                
+
