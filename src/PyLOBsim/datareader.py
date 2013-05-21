@@ -39,12 +39,12 @@ class DataModel(object):
             if verbose: print "started reading file: {}".format(filename)
             reader = open(filename,'r')
             if verbose: print "file in memory, loading lines into list"
-            a = 1
+#             a = 1
             for line in reader:
-                if a > 100000: break
+#                 if a > 100000: break
                 line = line[1:]
                 self.infile.append(line)
-                a+=1
+#                 a+=1
             self.numEntries = len(self.infile)
             if verbose: print "lines read"
             reader.close()
@@ -69,6 +69,8 @@ class DataModel(object):
                 if line[28:34] == self.symbol:
                     quote['type'] = 'limit'
                     quote['timestamp'] = int(line[:8])
+                    if quote['timestamp']==35587934:
+                        pass
                     quote['idNum'] = idNum
                     if line[21] == 'B':
                         quote['side'] = 'bid'

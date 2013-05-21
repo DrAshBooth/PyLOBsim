@@ -73,7 +73,7 @@ class VWAP(object):
             vols = []
             for i in range(numBins):
                 vols.append(0)
-            
+
             while not day_ended:
                 
                 # Get action from data

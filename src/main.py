@@ -4,7 +4,14 @@ Created on 15 Apr 2013
 @author: Ash Booth
 
 TODO:
-- DAY is ending way to early
+- Last run gave error:
+Day 8
+Traceback (most recent call last):
+  File "/Users/user/git/PyLOBsim/src/main.py", line 41, in <module>
+    symbol, numDays=25)
+  File "/Users/user/git/PyLOBsim/src/PyLOBsim/historical.py", line 108, in getVWAPs
+    props.append([v/float(totalVol) for v in vols])
+ZeroDivisionError: float division by zero
 '''
 
 if __name__ == '__main__':
@@ -38,7 +45,7 @@ if __name__ == '__main__':
     vwap_model = VWAP()
     numBins = 17
     proportions = vwap_model.getVWAPs(startTime, endTime, numBins, 
-                                      symbol, numDays=20)
+                                      symbol, numDays=25)
     
     print "Final proportions...", proportions
     
